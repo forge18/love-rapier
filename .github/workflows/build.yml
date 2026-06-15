@@ -54,7 +54,8 @@ jobs:
         shell: cmd
         run: |
           git clone --depth 1 -b v2.1 https://github.com/LuaJIT/LuaJIT.git C:\LuaJIT
-          cd C:\LuaJIT\src && msvcbuild.bat
+          cd /d C:\LuaJIT\src
+          call msvcbuild.bat
           echo C:\LuaJIT\src>>%GITHUB_PATH%
 
       - name: Run tests
