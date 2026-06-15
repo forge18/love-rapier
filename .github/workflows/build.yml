@@ -42,8 +42,13 @@ jobs:
       - name: Run tests
         shell: bash
         # Dependency-free runner (no luarocks/busted — luarocks can't load its manifest under LuaJIT).
-        # `lua` here is the LuaJIT installed above; the FFI loader resolves ./lib/native/<platform>/.
-        run: lua tests/run.lua
+        # The LuaJIT binary installed above is named `luajit` (a luajit version), not `lua`; resolve
+        # whichever is present. The FFI loader resolves ./lib/native/<platform>/.
+        run: |
+          bin="$(command -v luajit || command -v lua || true)"
+          echo "interpreter: ${bin:-<none found>}"
+          test -n "$bin" || { echo "no luajit/lua on PATH"; exit 1; }
+          "$bin" tests/run.lua
 
   build:
     needs: test
