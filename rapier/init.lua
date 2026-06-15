@@ -805,6 +805,11 @@ local function setFilter(self, field, install, fn)
     return fn(a, b) and 1 or 0
   end)
   self[field] = cb
+  -- LuaJIT can't safely invoke an FFI callback from a JIT-compiled trace ("bad callback" panic), and
+  -- step() is the hot path that fires these hooks. Disable (and flush) JIT compilation of step() once
+  -- a filter is installed, so the callback always runs from interpreted code. Opt-in, so games that
+  -- don't use filters keep a fully JIT-compiled step.
+  jit.off(World.step)
   install(self._w, cb)
 end
 

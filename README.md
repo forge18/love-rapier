@@ -100,8 +100,11 @@ snapshot/restore, and bit-identical determinism). They run under **LuaJIT** from
 
 ```sh
 scripts/build-native.sh macos-arm64   # build the host shim first
-busted --output=plainTerminal         # luarocks install busted
+luajit tests/run.lua                  # dependency-free runner (no luarocks/busted needed)
 ```
+
+(The tests are also busted-compatible — `busted` runs them too — but the bundled runner needs nothing
+but LuaJIT, which sidesteps luarocks's manifest not loading under LuaJIT.)
 
 CI (`.github/workflows/build.yml`) runs the suite on **all four platforms** — each building and
 executing its own native binary — and gates the release build on it.
