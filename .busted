@@ -1,0 +1,9 @@
+-- Busted config. Tests load the native shim via FFI, so run on LuaJIT from the repo root
+-- (the loader resolves ./lib/native/<platform>/). e.g.  busted --lua=luajit
+return {
+  default = {
+    ROOT = { "tests" },
+    pattern = "%.test",
+    lpath = "?.lua;?/init.lua;", -- rapier -> rapier/init.lua, rapier.ffi -> rapier/ffi.lua, etc.
+  },
+}

@@ -11,7 +11,43 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Runtime-test the actual compiled binary on each platform: build the host shim natively, drop it
+  # where the FFI loader expects (lib/native/<platdir>/), then run the busted suite under LuaJIT.
+  # This is the only place the Linux/Windows/Intel-mac binaries are *executed* (the cross-build job
+  # below only compiles them), so it gates the release.
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-14, platdir: macos-arm64, lib: librapier_shim.dylib }
+          - { os: macos-13, platdir: macos-x86_64, lib: librapier_shim.dylib }
+          - { os: ubuntu-latest, platdir: linux-x64, lib: librapier_shim.so }
+          - { os: windows-latest, platdir: windows-x64, lib: rapier_shim.dll }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the host shim
+        shell: bash
+        run: |
+          cargo build --release --manifest-path native/rapier_shim/Cargo.toml
+          mkdir -p "lib/native/${{ matrix.platdir }}"
+          cp "native/rapier_shim/target/release/${{ matrix.lib }}" "lib/native/${{ matrix.platdir }}/${{ matrix.lib }}"
+
+      - uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: luajit
+      - uses: leafo/gh-actions-luarocks@v4
+
+      - name: Run tests
+        shell: bash
+        run: |
+          luarocks install busted
+          busted --output=plainTerminal # reads .busted; loader resolves ./lib/native/<platform>/
+
   build:
+    needs: test
     runs-on: macos-14 # Apple Silicon
     steps:
       - uses: actions/checkout@v4

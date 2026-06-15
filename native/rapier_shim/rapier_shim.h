@@ -24,6 +24,15 @@ typedef struct {
 } ContactRecord;
 
 /**
+ * One contact-force event (fires when total contact force exceeds a collider's threshold).
+ */
+typedef struct {
+  uint64_t a;
+  uint64_t b;
+  float magnitude;
+} ContactForceRecord;
+
+/**
  * Create a new physics world (top-down: zero gravity). Free with `shim_world_free`.
  */
 PhysicsWorld *shim_world_new(void);
@@ -61,6 +70,16 @@ uint64_t shim_body_create(PhysicsWorld *world, int32_t kind, float x, float y);
 void shim_body_remove(PhysicsWorld *world, uint64_t handle);
 
 void shim_body_position(PhysicsWorld *world, uint64_t handle, float *out_x, float *out_y);
+
+/**
+ * Batched: write (x,y) for each of `count` body handles into `out` (a flat `float[2*count]`), in one
+ * FFI call instead of `count` calls to `shim_body_position`. Missing bodies write (0,0). The caller
+ * keeps persistent `handles`/`out` buffers across frames to avoid per-call allocation.
+ */
+void shim_bodies_read_transforms(PhysicsWorld *world,
+                                 const uint64_t *handles,
+                                 uint32_t count,
+                                 float *out);
 
 /**
  * Body rotation angle (radians), for rendering orientation.
@@ -166,5 +185,566 @@ void shim_kcc_move_ball(PhysicsWorld *world,
                         float dy,
                         float *out_x,
                         float *out_y);
+
+/**
+ * Set world gravity (default is zero — top-down). Side-scrollers use e.g. (0, 9.81).
+ */
+void shim_world_set_gravity(PhysicsWorld *world, float gx, float gy);
+
+/**
+ * Number of constraint solver iterations per step (higher = stiffer/more accurate, slower).
+ */
+void shim_world_set_solver_iterations(PhysicsWorld *world, uint32_t iters);
+
+float shim_body_angvel(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_set_angvel(PhysicsWorld *world, uint64_t handle, float av);
+
+void shim_body_set_rotation(PhysicsWorld *world, uint64_t handle, float angle);
+
+void shim_body_apply_torque_impulse(PhysicsWorld *world, uint64_t handle, float torque);
+
+void shim_body_add_torque(PhysicsWorld *world, uint64_t handle, float torque);
+
+void shim_body_apply_impulse_at_point(PhysicsWorld *world,
+                                      uint64_t handle,
+                                      float ix,
+                                      float iy,
+                                      float px,
+                                      float py);
+
+void shim_body_add_force_at_point(PhysicsWorld *world,
+                                  uint64_t handle,
+                                  float fx,
+                                  float fy,
+                                  float px,
+                                  float py);
+
+void shim_body_set_angular_damping(PhysicsWorld *world, uint64_t handle, float damping);
+
+void shim_body_set_gravity_scale(PhysicsWorld *world, uint64_t handle, float scale);
+
+/**
+ * Change body type at runtime (0=dynamic, 1=fixed, 2=kinematic-velocity, 3=kinematic-position).
+ */
+void shim_body_set_type(PhysicsWorld *world, uint64_t handle, int32_t kind);
+
+void shim_body_set_additional_mass(PhysicsWorld *world, uint64_t handle, float mass);
+
+float shim_body_mass(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_set_enabled(PhysicsWorld *world, uint64_t handle, bool enabled);
+
+void shim_body_wake_up(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_sleep(PhysicsWorld *world, uint64_t handle);
+
+int32_t shim_body_is_sleeping(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_set_dominance(PhysicsWorld *world, uint64_t handle, int32_t group);
+
+/**
+ * For kinematic-position bodies: the target translation reached at the end of the next step.
+ */
+void shim_body_set_next_kinematic_translation(PhysicsWorld *world,
+                                              uint64_t handle,
+                                              float x,
+                                              float y);
+
+void shim_body_set_next_kinematic_rotation(PhysicsWorld *world, uint64_t handle, float angle);
+
+void shim_collider_set_friction(PhysicsWorld *world, uint64_t handle, float friction);
+
+void shim_collider_set_restitution(PhysicsWorld *world, uint64_t handle, float restitution);
+
+void shim_collider_set_density(PhysicsWorld *world, uint64_t handle, float density);
+
+void shim_collider_set_mass(PhysicsWorld *world, uint64_t handle, float mass);
+
+/**
+ * Offset of an attached collider relative to its parent body's frame.
+ */
+void shim_collider_set_translation_wrt_parent(PhysicsWorld *world,
+                                              uint64_t handle,
+                                              float x,
+                                              float y);
+
+void shim_collider_set_rotation_wrt_parent(PhysicsWorld *world, uint64_t handle, float angle);
+
+/**
+ * Solver groups (which colliders generate contact *forces*), separate from collision groups
+ * (which generate contact *events/geometry*). Same bitmask semantics as `set_groups`.
+ */
+void shim_collider_set_solver_groups(PhysicsWorld *world,
+                                     uint64_t handle,
+                                     uint32_t memberships,
+                                     uint32_t filter);
+
+void shim_collider_set_enabled(PhysicsWorld *world, uint64_t handle, bool enabled);
+
+/**
+ * Absolute world position of a collider (for attached colliders this reflects the parent body).
+ */
+void shim_collider_position(PhysicsWorld *world, uint64_t handle, float *out_x, float *out_y);
+
+/**
+ * Teleport a free-standing (static) collider.
+ */
+void shim_collider_set_translation(PhysicsWorld *world, uint64_t handle, float x, float y);
+
+uint64_t shim_collider_static_triangle(PhysicsWorld *world,
+                                       float ax,
+                                       float ay,
+                                       float bx,
+                                       float by,
+                                       float cx,
+                                       float cy);
+
+uint64_t shim_collider_static_segment(PhysicsWorld *world, float ax, float ay, float bx, float by);
+
+/**
+ * A polyline from `count` points (flat `float[2*count]`) — open chains of map walls.
+ */
+uint64_t shim_collider_static_polyline(PhysicsWorld *world, const float *points, uint32_t count);
+
+/**
+ * Convex hull of `count` points. Returns 0 if the hull is degenerate (collinear/too few points).
+ */
+uint64_t shim_collider_static_convex_hull(PhysicsWorld *world, const float *points, uint32_t count);
+
+/**
+ * A heightfield from `count` height samples spaced evenly along x by `scale_x`, scaled in y by
+ * `scale_y` — efficient terrain/floor geometry.
+ */
+uint64_t shim_collider_static_heightfield(PhysicsWorld *world,
+                                          const float *heights,
+                                          uint32_t count,
+                                          float scale_x,
+                                          float scale_y);
+
+/**
+ * Rigidly weld two bodies (no relative motion) at the given local anchors.
+ */
+uint64_t shim_joint_fixed(PhysicsWorld *world,
+                          uint64_t b1,
+                          uint64_t b2,
+                          float a1x,
+                          float a1y,
+                          float a2x,
+                          float a2y);
+
+/**
+ * Pin two bodies at a point they rotate freely about (hinge).
+ */
+uint64_t shim_joint_revolute(PhysicsWorld *world,
+                             uint64_t b1,
+                             uint64_t b2,
+                             float a1x,
+                             float a1y,
+                             float a2x,
+                             float a2y);
+
+/**
+ * Constrain two bodies to slide along `axis` (no rotation) — pistons, elevators.
+ */
+uint64_t shim_joint_prismatic(PhysicsWorld *world,
+                              uint64_t b1,
+                              uint64_t b2,
+                              float a1x,
+                              float a1y,
+                              float a2x,
+                              float a2y,
+                              float axis_x,
+                              float axis_y);
+
+/**
+ * Limit the distance between two anchors to `max_dist` (a slack rope).
+ */
+uint64_t shim_joint_rope(PhysicsWorld *world,
+                         uint64_t b1,
+                         uint64_t b2,
+                         float a1x,
+                         float a1y,
+                         float a2x,
+                         float a2y,
+                         float max_dist);
+
+/**
+ * A damped spring pulling two anchors toward `rest_length`.
+ */
+uint64_t shim_joint_spring(PhysicsWorld *world,
+                           uint64_t b1,
+                           uint64_t b2,
+                           float a1x,
+                           float a1y,
+                           float a2x,
+                           float a2y,
+                           float rest_length,
+                           float stiffness,
+                           float damping);
+
+void shim_joint_remove(PhysicsWorld *world, uint64_t handle);
+
+/**
+ * Raycast that also returns the surface normal at the hit. Returns 1 on hit (writes collider,
+ * distance, normal), else 0.
+ */
+int32_t shim_query_raycast_normal(PhysicsWorld *world,
+                                  float ox,
+                                  float oy,
+                                  float dx,
+                                  float dy,
+                                  float max_toi,
+                                  uint64_t *out_collider,
+                                  float *out_toi,
+                                  float *out_nx,
+                                  float *out_ny);
+
+/**
+ * Sweep a shape (ball/cuboid/capsule) from (ox,oy)+angle along (dx,dy), up to `max_toi`. Returns 1
+ * on the first hit (writes collider + time-of-impact), else 0. For projectiles / movement sweeps.
+ */
+int32_t shim_query_shapecast(PhysicsWorld *world,
+                             int32_t shape,
+                             float a,
+                             float b,
+                             float ox,
+                             float oy,
+                             float angle,
+                             float dx,
+                             float dy,
+                             float max_toi,
+                             uint64_t *out_collider,
+                             float *out_toi);
+
+/**
+ * Project a point onto the nearest collider within `max_dist`. Returns 1 on success (writes the
+ * collider, the closest surface point, and whether the query point was inside it), else 0.
+ */
+int32_t shim_query_project_point(PhysicsWorld *world,
+                                 float px,
+                                 float py,
+                                 float max_dist,
+                                 uint64_t *out_collider,
+                                 float *out_x,
+                                 float *out_y,
+                                 int32_t *out_inside);
+
+/**
+ * Overlap test with an arbitrary shape (ball/cuboid/capsule) posed at (x,y)+angle. Fills the
+ * world's scratch buffer (read with `shim_overlap_count`/`shim_overlap_get`) and returns the count.
+ * Generalizes `shim_query_overlap_circle` to any analytic shape.
+ */
+uint32_t shim_query_overlap_shape(PhysicsWorld *world,
+                                  int32_t shape,
+                                  float a,
+                                  float b,
+                                  float x,
+                                  float y,
+                                  float angle);
+
+/**
+ * Like `shim_kcc_move_ball` but for any analytic shape, with a skin `offset` and a grounded report.
+ * Writes the collision-corrected translation to out_x/out_y and 1/0 (grounded) to `out_grounded`.
+ */
+void shim_kcc_move(PhysicsWorld *world,
+                   int32_t shape,
+                   float a,
+                   float b,
+                   float x,
+                   float y,
+                   float angle,
+                   float dx,
+                   float dy,
+                   float offset,
+                   float *out_x,
+                   float *out_y,
+                   int32_t *out_grounded);
+
+/**
+ * Drive a joint axis toward a target position/velocity with the given spring stiffness + damping
+ * (e.g. a revolute motor uses axis 2). Stiffness 0 + a target velocity = a pure velocity motor.
+ */
+void shim_joint_set_motor(PhysicsWorld *world,
+                          uint64_t joint,
+                          int32_t axis,
+                          float target_pos,
+                          float target_vel,
+                          float stiffness,
+                          float damping);
+
+/**
+ * Limit a joint axis to [min, max] (radians for the angular axis, world units for linear).
+ */
+void shim_joint_set_limits(PhysicsWorld *world, uint64_t joint, int32_t axis, float min, float max);
+
+void shim_joint_set_motor_max_force(PhysicsWorld *world,
+                                    uint64_t joint,
+                                    int32_t axis,
+                                    float max_force);
+
+/**
+ * Whether the two jointed bodies still generate contacts with each other.
+ */
+void shim_joint_set_contacts_enabled(PhysicsWorld *world, uint64_t joint, bool enabled);
+
+uint64_t shim_multibody_joint_fixed(PhysicsWorld *world,
+                                    uint64_t b1,
+                                    uint64_t b2,
+                                    float a1x,
+                                    float a1y,
+                                    float a2x,
+                                    float a2y);
+
+uint64_t shim_multibody_joint_revolute(PhysicsWorld *world,
+                                       uint64_t b1,
+                                       uint64_t b2,
+                                       float a1x,
+                                       float a1y,
+                                       float a2x,
+                                       float a2y);
+
+uint64_t shim_multibody_joint_prismatic(PhysicsWorld *world,
+                                        uint64_t b1,
+                                        uint64_t b2,
+                                        float a1x,
+                                        float a1y,
+                                        float a2x,
+                                        float a2y,
+                                        float axis_x,
+                                        float axis_y);
+
+void shim_multibody_joint_remove(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_lock_translations(PhysicsWorld *world, uint64_t handle, bool locked);
+
+/**
+ * Allow/forbid translation per axis (e.g. a 2.5D platformer locking y).
+ */
+void shim_body_set_enabled_translations(PhysicsWorld *world,
+                                        uint64_t handle,
+                                        bool allow_x,
+                                        bool allow_y);
+
+void shim_body_reset_forces(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_reset_torques(PhysicsWorld *world, uint64_t handle);
+
+/**
+ * Set full pose (translation + rotation) in one call.
+ */
+void shim_body_set_position(PhysicsWorld *world, uint64_t handle, float x, float y, float angle);
+
+/**
+ * Body type code: 0=dynamic, 1=fixed, 2=kinematic-velocity, 3=kinematic-position.
+ */
+int32_t shim_body_type(PhysicsWorld *world, uint64_t handle);
+
+int32_t shim_body_is_enabled(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_center_of_mass(PhysicsWorld *world, uint64_t handle, float *out_x, float *out_y);
+
+/**
+ * Override mass properties directly (center of mass + scalar 2D inertia), added to collider-derived.
+ */
+void shim_body_set_additional_mass_properties(PhysicsWorld *world,
+                                              uint64_t handle,
+                                              float mass,
+                                              float com_x,
+                                              float com_y,
+                                              float inertia);
+
+void shim_body_recompute_mass(PhysicsWorld *world, uint64_t handle);
+
+void shim_body_set_soft_ccd_prediction(PhysicsWorld *world, uint64_t handle, float distance);
+
+/**
+ * Toggle which events a collider emits: collision events and/or contact-force events.
+ */
+void shim_collider_set_active_events(PhysicsWorld *world,
+                                     uint64_t handle,
+                                     bool collision,
+                                     bool contact_force);
+
+/**
+ * Raw `ActiveCollisionTypes` bitmask — which body-type pairs generate contacts (default excludes
+ * fixed/fixed and kinematic/kinematic; set bits to enable those).
+ */
+void shim_collider_set_active_collision_types(PhysicsWorld *world, uint64_t handle, uint32_t bits);
+
+void shim_collider_set_contact_force_threshold(PhysicsWorld *world,
+                                               uint64_t handle,
+                                               float threshold);
+
+/**
+ * Swap a collider's shape in place (ball/cuboid/capsule).
+ */
+void shim_collider_set_shape(PhysicsWorld *world, uint64_t handle, int32_t shape, float a, float b);
+
+/**
+ * Absolute rotation of a free-standing (static) collider.
+ */
+void shim_collider_set_rotation(PhysicsWorld *world, uint64_t handle, float angle);
+
+float shim_collider_density(PhysicsWorld *world, uint64_t handle);
+
+float shim_collider_mass(PhysicsWorld *world, uint64_t handle);
+
+float shim_collider_volume(PhysicsWorld *world, uint64_t handle);
+
+/**
+ * The body a collider is attached to, or 0 if it is free-standing (static).
+ */
+uint64_t shim_collider_parent(PhysicsWorld *world, uint64_t handle);
+
+int32_t shim_collider_is_sensor(PhysicsWorld *world, uint64_t handle);
+
+/**
+ * Colliders currently in solid contact with `collider` (as of the last step). Fills the scratch
+ * buffer (read with `shim_overlap_count`/`shim_overlap_get`) and returns the count.
+ */
+uint32_t shim_contacts_with(PhysicsWorld *world, uint64_t collider);
+
+/**
+ * Colliders currently intersecting `collider` via sensor/intersection pairs (as of the last step).
+ * Fills the scratch buffer and returns the count.
+ */
+uint32_t shim_intersections_with(PhysicsWorld *world, uint64_t collider);
+
+/**
+ * Raycast honoring collision groups and optionally excluding one collider (0 = exclude none).
+ * Returns 1 on hit (writes collider + distance), else 0.
+ */
+int32_t shim_query_raycast_filtered(PhysicsWorld *world,
+                                    float ox,
+                                    float oy,
+                                    float dx,
+                                    float dy,
+                                    float max_toi,
+                                    uint32_t memberships,
+                                    uint32_t filter,
+                                    uint64_t exclude,
+                                    uint64_t *out_collider,
+                                    float *out_toi);
+
+/**
+ * The simulation's length unit (≈ the size of a typical dynamic object, in world units). Tunes
+ * internal tolerances; set once after creating the world if your units aren't ~1 = 1 meter.
+ */
+void shim_world_set_length_unit(PhysicsWorld *world, float length_unit);
+
+void shim_world_set_max_ccd_substeps(PhysicsWorld *world, uint32_t substeps);
+
+/**
+ * Number of contact-force events queued since the last `shim_force_events_clear`.
+ */
+uint32_t shim_force_events_count(PhysicsWorld *world);
+
+int32_t shim_force_events_get(PhysicsWorld *world, uint32_t i, ContactForceRecord *out);
+
+void shim_force_events_clear(PhysicsWorld *world);
+
+/**
+ * Geometry of the deepest current contact between two colliders (as of the last step): world-space
+ * normal, world-space contact point, and penetration depth (positive = overlapping). Returns 1 if
+ * the pair is in contact, else 0. For hit sparks, decals, surface-aligned effects.
+ */
+int32_t shim_contact_pair_info(PhysicsWorld *world,
+                               uint64_t c1,
+                               uint64_t c2,
+                               float *out_nx,
+                               float *out_ny,
+                               float *out_px,
+                               float *out_py,
+                               float *out_depth);
+
+/**
+ * Extra solver iterations for this body specifically (on top of the world's), for stiffer joints
+ * or stacks on a high-priority object.
+ */
+void shim_body_set_additional_solver_iterations(PhysicsWorld *world,
+                                                uint64_t handle,
+                                                uint32_t iters);
+
+/**
+ * Raw locked-axes bitmask: bit 0 = lock translation X, bit 1 = lock translation Y, bit 2 = lock
+ * rotation. Combines the per-axis locks in one call.
+ */
+void shim_body_set_locked_axes(PhysicsWorld *world, uint64_t handle, uint32_t bits);
+
+/**
+ * A small extra contact margin (helps stability for thin/fast colliders).
+ */
+void shim_collider_set_contact_skin(PhysicsWorld *world, uint64_t handle, float skin);
+
+/**
+ * How this collider's friction combines with another's: 0=average, 1=min, 2=multiply, 3=max.
+ */
+void shim_collider_set_friction_combine_rule(PhysicsWorld *world, uint64_t handle, int32_t rule);
+
+/**
+ * How this collider's restitution combines with another's: 0=average, 1=min, 2=multiply, 3=max.
+ */
+void shim_collider_set_restitution_combine_rule(PhysicsWorld *world, uint64_t handle, int32_t rule);
+
+/**
+ * Set the collider's mass properties directly (mass, center of mass, scalar 2D inertia).
+ */
+void shim_collider_set_mass_properties(PhysicsWorld *world,
+                                       uint64_t handle,
+                                       float mass,
+                                       float com_x,
+                                       float com_y,
+                                       float inertia);
+
+/**
+ * Install (or clear, with a null pointer) the contact-pair filter callback. The callback gets the
+ * two packed collider handles and returns non-zero to allow the contact, 0 to suppress it. Only
+ * consulted for colliders opted in via `shim_collider_set_active_hooks`.
+ */
+void shim_set_contact_filter(PhysicsWorld *world, int32_t (*cb)(uint64_t, uint64_t));
+
+/**
+ * Install (or clear) the intersection-pair (sensor) filter callback. Same contract as above.
+ */
+void shim_set_intersection_filter(PhysicsWorld *world, int32_t (*cb)(uint64_t, uint64_t));
+
+/**
+ * Opt a collider into the hook callbacks (off by default, so hooks cost nothing unless requested).
+ */
+void shim_collider_set_active_hooks(PhysicsWorld *world,
+                                    uint64_t handle,
+                                    bool contact,
+                                    bool intersection);
+
+/**
+ * Serialize the full simulation state to a freshly-allocated byte buffer (length written to
+ * `out_len`). Free it with `shim_buffer_free`. Pipelines/solver/hooks/event queues are transient
+ * and not part of the snapshot. For deterministic save states & lockstep/rollback netcode.
+ */
+uint8_t *shim_world_snapshot(PhysicsWorld *world, uint32_t *out_len);
+
+/**
+ * Rebuild a world from a snapshot (see `shim_world_snapshot`). Returns a new world to free with
+ * `shim_world_free`, or null if the bytes can't be decoded.
+ */
+PhysicsWorld *shim_world_restore(const uint8_t *bytes, uint32_t len);
+
+/**
+ * Free a byte buffer returned by `shim_world_snapshot`.
+ */
+void shim_buffer_free(uint8_t *ptr, uint32_t len);
+
+/**
+ * Render the world's collision shapes (and joints) to a flat line-vertex buffer: `count` floats as
+ * `[ax, ay, bx, by, ...]`, one line per 4 floats. Free with `shim_debug_buffer_free`. Lets a
+ * renderer draw Rapier's own debug view instead of reconstructing shapes by hand.
+ */
+float *shim_debug_render(PhysicsWorld *world, uint32_t *out_count);
+
+/**
+ * Free a vertex buffer returned by `shim_debug_render`.
+ */
+void shim_debug_buffer_free(float *ptr, uint32_t count);
 
 #endif  /* RAPIER_SHIM_H */

@@ -1,4 +1,4 @@
-MIT License
+# MIT License
 
 Copyright (c) 2026 love-rapier contributors
 
@@ -22,6 +22,6 @@ SOFTWARE.
 
 ---
 
-The compiled native library (lib/native/) links Rapier2D (https://rapier.rs),
+The compiled native library (lib/native/) links Rapier2D (<https://rapier.rs>),
 which is licensed under Apache-2.0. Retain Rapier's license notice when
 redistributing the binaries.

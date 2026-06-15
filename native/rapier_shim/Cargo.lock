@@ -22,6 +22,9 @@ name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "autocfg"
@@ -30,10 +33,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4388bee8683e3d04af747c73422af53102d2bd24d9eadb6cbc100baef4b43f8"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "bytemuck"
@@ -100,6 +115,7 @@ checksum = "898f5a568a84989b6c0f8caa50a93074b97dbdc58fc6d9543157bb4562758933"
 dependencies = [
  "approx",
  "libm",
+ "serde_core",
 ]
 
 [[package]]
@@ -112,6 +128,7 @@ dependencies = [
  "glam 0.33.1",
  "nalgebra",
  "num-traits",
+ "serde",
  "simba",
 ]
 
@@ -133,6 +150,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 dependencies = [
  "foldhash",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -185,6 +204,7 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
+ "serde",
  "simba",
  "typenum",
 ]
@@ -217,6 +237,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -289,6 +310,8 @@ dependencies = [
  "num-derive",
  "num-traits",
  "ordered-float",
+ "serde",
+ "serde_arrays",
  "simba",
  "slab",
  "smallvec",
@@ -358,6 +381,7 @@ dependencies = [
 name = "rapier_shim"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "rapier2d",
 ]
 
@@ -390,6 +414,15 @@ checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
 dependencies = [
  "serde_core",
  "serde_derive",
+]
+
+[[package]]
+name = "serde_arrays"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94a16b99c5ea4fe3daccd14853ad260ec00ea043b2708d1fd1da3106dcd8d9df"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -446,6 +479,7 @@ dependencies = [
  "hashbrown 0.16.1",
  "num-traits",
  "robust",
+ "serde",
  "smallvec",
 ]
 

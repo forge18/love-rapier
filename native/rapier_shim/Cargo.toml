@@ -12,10 +12,16 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Pinned — we ship one build and don't chase updates (app, not a library).
-# enhanced-determinism: cross-platform deterministic simulation (our reason for Rapier).
-rapier2d = { version = "=0.33.0", features = ["enhanced-determinism"] }
+#   enhanced-determinism: cross-platform deterministic simulation (our reason for Rapier).
+#   serde-serialize: world snapshot/restore.  debug-render: collision-shape debug geometry.
+rapier2d = { version = "=0.33.0", features = ["enhanced-determinism", "serde-serialize", "debug-render"] }
+# Compact binary (de)serialization for world snapshots.
+bincode = "1.3"
 
 [profile.release]
 # Smaller, faster shipped lib.
 lto = true
 codegen-units = 1
+# A Rust panic unwinding across the `extern "C"` boundary into LuaJIT is undefined behavior; abort
+# cleanly instead (parry shape constructors can panic on degenerate input).
+panic = "abort"
