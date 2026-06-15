@@ -35,15 +35,32 @@ jobs:
           mkdir -p "lib/native/${{ matrix.platdir }}"
           cp "native/rapier_shim/target/release/${{ matrix.lib }}" "lib/native/${{ matrix.platdir }}/${{ matrix.lib }}"
 
-      - uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: luajit-openresty # bare "luajit" 404s; openresty's LuaJIT is reliably hosted
+      # Install LuaJIT per-OS. (Building it from source via gh-actions-lua breaks on Windows — the
+      # LuaJIT Makefile's version step uses cmd syntax that fails under bash — so use system packages
+      # on Unix and the official MSVC build on Windows.)
+      - name: Install LuaJIT (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y luajit
+
+      - name: Install LuaJIT (macOS)
+        if: runner.os == 'macOS'
+        run: brew install luajit
+
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Install LuaJIT (Windows, MSVC)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          git clone --depth 1 -b v2.1 https://github.com/LuaJIT/LuaJIT.git C:\LuaJIT
+          cd C:\LuaJIT\src && msvcbuild.bat
+          echo C:\LuaJIT\src>>%GITHUB_PATH%
 
       - name: Run tests
         shell: bash
         # Dependency-free runner (no luarocks/busted — luarocks can't load its manifest under LuaJIT).
-        # The LuaJIT binary installed above is named `luajit` (a luajit version), not `lua`; resolve
-        # whichever is present. The FFI loader resolves ./lib/native/<platform>/.
+        # The FFI loader resolves ./lib/native/<platform>/ from the repo root.
         run: |
           bin="$(command -v luajit || command -v lua || true)"
           echo "interpreter: ${bin:-<none found>}"

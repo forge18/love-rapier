@@ -274,6 +274,9 @@ local function baseDir()
 end
 
 local path = baseDir() .. "/lib/native/" .. platformDir() .. "/" .. libName()
+if jit.os == "Windows" then
+  path = path:gsub("/", "\\") -- LoadLibrary is unreliable with forward slashes
+end
 local C = ffi.load(path)
 
 -- shim_* come from the ffi.cdef above; LuaLS can't introspect cdef strings, so type the namespace
