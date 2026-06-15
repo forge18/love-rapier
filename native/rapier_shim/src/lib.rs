@@ -229,6 +229,32 @@ pub extern "C" fn shim_body_position(
   }
 }
 
+/// Batched: write (x,y) for each of `count` body handles into `out` (a flat `float[2*count]`), in one
+/// FFI call instead of `count` calls to `shim_body_position`. Missing bodies write (0,0). The caller
+/// keeps persistent `handles`/`out` buffers across frames to avoid per-call allocation.
+#[no_mangle]
+pub extern "C" fn shim_bodies_read_transforms(
+  world: *mut PhysicsWorld,
+  handles: *const u64,
+  count: u32,
+  out: *mut f32,
+) {
+  let w = unsafe { &*world };
+  let handles = unsafe { std::slice::from_raw_parts(handles, count as usize) };
+  let out = unsafe { std::slice::from_raw_parts_mut(out, count as usize * 2) };
+  for i in 0..count as usize {
+    let (x, y) = match w.bodies.get(unpack_body(handles[i])) {
+      Some(rb) => {
+        let t = rb.translation();
+        (t.x, t.y)
+      }
+      None => (0.0, 0.0),
+    };
+    out[i * 2] = x;
+    out[i * 2 + 1] = y;
+  }
+}
+
 /// Body rotation angle (radians), for rendering orientation.
 #[no_mangle]
 pub extern "C" fn shim_body_rotation(world: *mut PhysicsWorld, handle: u64) -> f32 {

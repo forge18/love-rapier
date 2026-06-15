@@ -8,6 +8,11 @@
 -- Shape codes: "ball" {radius}, "cuboid" {hx,hy}, "capsule" {half_height,radius}.
 -- Body kinds:  "dynamic", "fixed", "kinematic".
 
+-- FFI binding file. `undefined-field`: C.shim_* come from ffi.cdef strings LuaLS can't introspect.
+-- `duplicate-*`: this module is vendored into consumers (e.g. project-ignis lib/rapier/), so the
+-- PhysicsWorld class can appear twice when both repos are open in one workspace — not a real bug.
+---@diagnostic disable: undefined-field, duplicate-set-field, duplicate-doc-field
+
 local ffi = require("ffi")
 local C = require("rapier.ffi")
 
@@ -55,6 +60,15 @@ end
 function World:position(h)
   C.shim_body_position(self._w, h, f2a, f2b)
   return f2a[0], f2b[0]
+end
+
+--- Batched position read — one FFI call for many bodies instead of one `position()` per body.
+--- `handles` is a `uint64_t[count]` cdata of body handles, `out` a `float[2*count]` cdata; on return
+--- `out[2*i], out[2*i+1]` are body i's x,y. Keep both buffers persistent across frames (no per-call
+--- alloc). For large body counts this avoids O(N) boundary crossings.
+function World:readTransforms(handles, count, out)
+  C.shim_bodies_read_transforms(self._w, handles, count, out)
+  return out
 end
 
 --- @return number radians

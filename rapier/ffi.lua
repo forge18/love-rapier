@@ -26,6 +26,7 @@ void          shim_events_clear(PhysicsWorld* world);
 uint64_t      shim_body_create(PhysicsWorld* world, int32_t kind, float x, float y);
 void          shim_body_remove(PhysicsWorld* world, uint64_t handle);
 void          shim_body_position(PhysicsWorld* world, uint64_t handle, float* out_x, float* out_y);
+void          shim_bodies_read_transforms(PhysicsWorld* world, const uint64_t* handles, uint32_t count, float* out);
 float         shim_body_rotation(PhysicsWorld* world, uint64_t handle);
 void          shim_body_set_translation(PhysicsWorld* world, uint64_t handle, float x, float y);
 void          shim_body_set_linvel(PhysicsWorld* world, uint64_t handle, float vx, float vy);
