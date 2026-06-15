@@ -8,10 +8,12 @@
 -- Shape codes: "ball" {radius}, "cuboid" {hx,hy}, "capsule" {half_height,radius}.
 -- Body kinds:  "dynamic", "fixed", "kinematic".
 
--- FFI binding file. `undefined-field`: C.shim_* come from ffi.cdef strings LuaLS can't introspect.
--- `duplicate-*`: this module is vendored into consumers (e.g. project-ignis lib/rapier/), so the
--- PhysicsWorld class can appear twice when both repos are open in one workspace — not a real bug.
----@diagnostic disable: undefined-field, duplicate-set-field, duplicate-doc-field
+-- FFI binding file — diagnostics LuaLS can't get right here, none of them real bugs:
+--   undefined-field   : C.shim_* are declared in ffi.cdef strings, which LuaLS can't introspect.
+--   param-type-mismatch: ffi.new("float[1]") etc. — LuaLS's ffi.new def rejects the string ctype.
+--   duplicate-*       : this module is vendored into consumers (project-ignis lib/rapier/), so the
+--                       PhysicsWorld class is seen twice when both repos are open in one workspace.
+---@diagnostic disable: undefined-field, param-type-mismatch, duplicate-set-field, duplicate-doc-field
 
 local ffi = require("ffi")
 local C = require("rapier.ffi")
@@ -19,10 +21,12 @@ local C = require("rapier.ffi")
 local physics = {}
 
 -- Reused scratch buffers so per-call queries don't allocate cdata every frame.
-local f2a = ffi.new("float[1]")
-local f2b = ffi.new("float[1]")
-local u64 = ffi.new("uint64_t[1]")
-local rec = ffi.new("ContactRecord[1]")
+-- Constructed via ffi.typeof()() rather than ffi.new("…") so the ctype is an ffi.ctype.
+local float1 = ffi.typeof("float[1]")
+local f2a = float1()
+local f2b = float1()
+local u64 = ffi.typeof("uint64_t[1]")()
+local rec = ffi.typeof("ContactRecord[1]")()
 
 local BODY_KIND = { dynamic = 0, fixed = 1, kinematic = 2 }
 local SHAPE = { ball = 0, cuboid = 1, capsule = 2 }
