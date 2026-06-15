@@ -1,0 +1,6 @@
+# Rust build output (the compiled libs under lib/native/ ARE committed/shipped)
+/native/rapier_shim/target/
+
+# Lua / misc
+*.luac
+.DS_Store

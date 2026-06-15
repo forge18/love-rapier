@@ -1,0 +1,21 @@
+[package]
+name = "rapier_shim"
+version = "0.1.0"
+edition = "2021"
+description = "C-ABI shim exposing Rapier2D to LuaJIT FFI for project-ignis."
+license = "MIT"
+
+[lib]
+name = "rapier_shim"
+# cdylib: a C-ABI dynamic library (.dylib/.so/.dll) that LuaJIT's ffi.load can call.
+crate-type = ["cdylib"]
+
+[dependencies]
+# Pinned — we ship one build and don't chase updates (app, not a library).
+# enhanced-determinism: cross-platform deterministic simulation (our reason for Rapier).
+rapier2d = { version = "=0.33.0", features = ["enhanced-determinism"] }
+
+[profile.release]
+# Smaller, faster shipped lib.
+lto = true
+codegen-units = 1
