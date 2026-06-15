@@ -2,6 +2,10 @@
 
 A [LÖVE](https://love2d.org) 2D physics binding for **[Rapier2D](https://rapier.rs)** via LuaJIT FFI.
 
+> **⚠️ Alpha.** The binding is feature-complete — the full Rapier2D surface is bound — and the test
+> suite runs in CI on macOS, Linux, and Windows. But it's new and hasn't been battle-tested across
+> all platforms in real projects yet. Expect rough edges; please report anything you hit.
+
 ## Overview
 
 Rapier runs as a native shim (a small Rust `cdylib`); the Lua side is a thin, idiomatic wrapper. No
