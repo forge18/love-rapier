@@ -10,6 +10,11 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# The release step needs write access to create the GitHub Release + upload assets on a tag.
+# (Default GITHUB_TOKEN is read-only, which 403s softprops/action-gh-release.)
+permissions:
+  contents: write
+
 jobs:
   # Runtime-test the actual compiled binary on each platform: build the host shim natively, drop it
   # where the FFI loader expects (lib/native/<platdir>/), then run the busted suite under LuaJIT.
