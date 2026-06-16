@@ -21,7 +21,7 @@ jobs:
       matrix:
         include:
           - { os: macos-14, platdir: macos-arm64, lib: librapier_shim.dylib }
-          - { os: macos-13, platdir: macos-x86_64, lib: librapier_shim.dylib }
+          - { os: macos-15-intel, platdir: macos-x86_64, lib: librapier_shim.dylib }
           - { os: ubuntu-latest, platdir: linux-x64, lib: librapier_shim.so }
           - { os: windows-latest, platdir: windows-x64, lib: rapier_shim.dll }
     runs-on: ${{ matrix.os }}
